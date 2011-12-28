@@ -1,0 +1,1105 @@
+<html>  
+  <head>  
+    <title>Let it snow</title>
+    <div style='display:none'>
+      <author>astrangeguy</author>
+      <license>DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                    Version 2, December 2004
+
+ Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+ Everyone is permitted to copy and distribute verbatim or modified
+ copies of this license document, and changing it is allowed as long
+ as the name is changed.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO. 
+      </license>
+    </div>
+  </head>
+  <body bgcolor="black">
+    <canvas id="canvas"></canvas>
+    <script type="text/javascript">
+
+
+/**
+*
+*  Base64 encode / decode
+*  http://www.webtoolkit.info/
+*
+**/
+ 
+var Base64 = {
+ 
+	// private property
+	_keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+ 
+	// public method for encoding
+	encode : function (input) {
+		var output = "";
+		var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+		var i = 0;
+ 
+		input = Base64._utf8_encode(input);
+ 
+		while (i < input.length) {
+ 
+			chr1 = input.charCodeAt(i++);
+			chr2 = input.charCodeAt(i++);
+			chr3 = input.charCodeAt(i++);
+ 
+			enc1 = chr1 >> 2;
+			enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+			enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+			enc4 = chr3 & 63;
+ 
+			if (isNaN(chr2)) {
+				enc3 = enc4 = 64;
+			} else if (isNaN(chr3)) {
+				enc4 = 64;
+			}
+ 
+			output = output +
+			this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+			this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+ 
+		}
+ 
+		return output;
+	},
+ 
+	// public method for decoding
+	decode : function (input) {
+		var output = "";
+		var chr1, chr2, chr3;
+		var enc1, enc2, enc3, enc4;
+		var i = 0;
+ 
+		input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+ 
+		while (i < input.length) {
+ 
+			enc1 = this._keyStr.indexOf(input.charAt(i++));
+			enc2 = this._keyStr.indexOf(input.charAt(i++));
+			enc3 = this._keyStr.indexOf(input.charAt(i++));
+			enc4 = this._keyStr.indexOf(input.charAt(i++));
+ 
+			chr1 = (enc1 << 2) | (enc2 >> 4);
+			chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+			chr3 = ((enc3 & 3) << 6) | enc4;
+ 
+			output = output + String.fromCharCode(chr1);
+ 
+			if (enc3 != 64) {
+				output = output + String.fromCharCode(chr2);
+			}
+			if (enc4 != 64) {
+				output = output + String.fromCharCode(chr3);
+			}
+ 
+		}
+ 
+		output = Base64._utf8_decode(output);
+ 
+		return output;
+ 
+	},
+ 
+	// private method for UTF-8 encoding
+	_utf8_encode : function (string) {
+		string = string.replace(/\r\n/g,"\n");
+		var utftext = "";
+ 
+		for (var n = 0; n < string.length; n++) {
+ 
+			var c = string.charCodeAt(n);
+ 
+			if (c < 128) {
+				utftext += String.fromCharCode(c);
+			}
+			else if((c > 127) && (c < 2048)) {
+				utftext += String.fromCharCode((c >> 6) | 192);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+			else {
+				utftext += String.fromCharCode((c >> 12) | 224);
+				utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+ 
+		}
+ 
+		return utftext;
+	},
+ 
+	// private method for UTF-8 decoding
+	_utf8_decode : function (utftext) {
+		var string = "";
+		var i = 0;
+		var c = c1 = c2 = 0;
+ 
+		while ( i < utftext.length ) {
+ 
+			c = utftext.charCodeAt(i);
+ 
+			if (c < 128) {
+				string += String.fromCharCode(c);
+				i++;
+			}
+			else if((c > 191) && (c < 224)) {
+				c2 = utftext.charCodeAt(i+1);
+				string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+				i += 2;
+			}
+			else {
+				c2 = utftext.charCodeAt(i+1);
+				c3 = utftext.charCodeAt(i+2);
+				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+				i += 3;
+			}
+ 
+		}
+ 
+		return string;
+	}
+ 
+};
+
+
+
+
+
+
+
+var canvas = document.getElementById('canvas');
+canvas.height = window.innerHeight;
+canvas.width = window.innerWidth;
+
+window.onresize = function() {
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+};
+
+var ctx = canvas.getContext('2d');
+ctx.mozImageSmoothingEnabled = false;
+
+var rand = Math.random;
+var PI = Math.PI;
+var PI_2 = PI/2;
+var PIx2 = PI*2;
+var PIx2_6 = PI*2/6;
+
+var shuffle = function(arr) {
+    return arr.slice(0).sort(function(_, _) {
+        return 0.5 - rand();
+    });
+};
+
+var forEachDelayed = function(arr, delay, func, afterwards) {
+    var len = arr.length;
+    var i = 0;
+
+    var loop = function() {
+        if(i < len) {
+            var e = arr[i];
+            i++;
+            func(e, function() { setTimeout(loop, delay); });
+        } else {
+            afterwards();
+        }
+    };
+    loop();
+};
+
+var requestAnimationFrame = window.requestAnimationFrame || 
+    window.webkitRequestAnimationFrame || 
+    window.mozRequestAnimationFrame    || 
+    window.oRequestAnimationFrame      || 
+    window.msRequestAnimationFrame     || 
+    function(callback){
+        window.setTimeout(callback, 1000 / 50);
+    };
+
+
+var assert = function(bool, msg) {
+    if(!bool) throw "Assertion failed" + msg? ': ' + msg : '';
+};
+
+var drawFlake = function(ctx, xmid, ymid) {
+    ctx.save();
+    
+    ctx.strokeStyle = "white";
+    ctx.translate(xmid, ymid);
+    ctx.rotate(PIx2 * rand());
+    var times = 5 + rand() * 5;
+    for(var i1 = 0; i1 < times; i1++) {
+        var len = rand() * 8;
+        var dx = rand() * 16;
+        var a1 = PIx2 * rand();
+        var a2 = PI * rand() - PI_2;
+
+        for(var a3 = 0; a3 < 6; a3 += PIx2_6) {
+            ctx.save();
+            ctx.rotate(a3); // 'Speichenwinkel'
+
+            ctx.save();
+            ctx.rotate(a1);
+            ctx.translate(dx, 0);
+            ctx.rotate(a2);
+            ctx.moveTo(0,0);
+            ctx.lineTo(len,0);
+
+            ctx.restore();
+
+            ctx.scale(-1, 1); // selbes, spiegelverkehrt
+            ctx.rotate(a1);
+            ctx.translate(dx, 0);
+            ctx.rotate(a2);
+            ctx.moveTo(0,0);
+            ctx.lineTo(len,0);
+
+            ctx.restore();
+        }
+    }
+    ctx.stroke();
+    ctx.restore();
+};
+
+var fadeFlake = (function() {
+    var maxFlakes = 0;
+    var currentFlake = 0;
+    var removedFlakes = 0;
+    var callback = undefined;
+
+    var flakeAdded = function() { maxFlakes++; };
+    var flakeRemoved = function() { removedFlakes++; };
+    // flakeRemoved() must be called bevore flakeDrawn() !!!
+    var flakeDrawn = function() {
+        currentFlake++;
+        if(currentFlake >= maxFlakes) {
+            maxFlakes -= removedFlakes;
+            currentFlake = 0;
+            removedFlakes = 0;
+            if(maxFlakes === 0 && callback) {
+                var cb = callback;
+                callback = undefined;
+                cb();
+            }
+        }
+    };
+
+    var maybeClearScreen = function() {
+        if(currentFlake === 0) {
+            ctx.save();
+            ctx.setTransform(1,0,0,1,0,0);
+            ctx.clearRect(0, 0, canvas.width * 10, canvas.height * 10);
+            ctx.restore();
+        }
+    };
+
+    var ret = function(flake, x, y, framesToStay, fadeFrames) {
+        flakeAdded();
+        var alpha = ctx.globalAlpha;
+        var fadeStep = alpha / fadeFrames;
+        var dx = 4 - rand() * 8;
+        var dy = 4 - rand() * 8;
+
+        var draw = function() {
+            maybeClearScreen();
+
+            ctx.save();
+            if(framesToStay <= 0) {
+                ctx.globalAlpha = alpha;
+                alpha -= fadeStep;
+                dx += 1 - rand() * 2;
+                dy += 1 - rand() * 2;
+            } else {
+                framesToStay--;
+            }
+
+            if(alpha <= 0) {
+                flakeRemoved();
+            } else {
+                ctx.translate(x + dx / alpha, y + dy / alpha);
+                ctx.scale(alpha, alpha);
+                ctx.drawImage(flake, 0, 0);
+                requestAnimationFrame(draw);
+            }
+            ctx.restore();
+            flakeDrawn();
+        }
+        requestAnimationFrame(draw);
+    };
+    ret.onCleared = function(cb) {
+        if(maxFlakes <= 0) {
+            cb();
+        } else {
+            callback = cb;
+        }
+    };
+
+    return ret;
+})();
+
+var makeFlake = function() {
+    var tmp_canvas = document.createElement('canvas');
+    tmp_canvas.width = 48;
+    tmp_canvas.height = 48;
+    drawFlake(tmp_canvas.getContext('2d'), 24, 24);
+    return tmp_canvas;
+};
+
+var makeFlakeHolder = function(amount) {
+    var flakes = [];
+
+    for(var i = 0; i < amount; i++) {
+        flakes.push(makeFlake());
+    }
+
+    return function() { return flakes[Math.floor(amount * rand())]; };
+};
+
+var getFlake = makeFlakeHolder(256);
+
+var pt = function(x, y) {
+    return Object.create(null, { x: { value: x }, y: { value: y } });
+};
+
+Array.prototype.asGlyph = Array.prototype.shuffle;
+
+var child = Object.create;
+
+var copyObj = function(obj) {
+    var copy = Object.create(Object.getPrototypeOf(obj));
+    Object.getOwnPropertyNames(obj).forEach(function(p) {
+        Object.defineProperty(copy, p, Object.getOwnPropertyDescriptor(obj, p));
+    });
+    return copy;
+};
+
+var flakeSize = 48;
+
+var makeGlyph = function(arr){
+    assert(arr.length > 0);
+    var gly = child(makeGlyph.prototype, {
+        points: { value: arr, writable: true },
+        height: { value: NaN, writable: true },
+        width: { value: NaN, writable: true }
+    });
+    gly.recalcDimensions();
+    return gly;
+};
+
+makeGlyph.prototype.recalcDimensions = function() {
+    var minx = Infinity;
+    var miny = Infinity;
+    var maxx = -Infinity;
+    var maxy = -Infinity;
+    this.points.forEach(function(p) {
+        minx = (p.x < minx)? p.x : minx;
+        miny = (p.y < miny)? p.y : miny;
+        maxx = (p.x > maxx)? p.x : maxx;
+        maxy = (p.y > maxy)? p.y : maxy;
+    });
+    this.points = this.points.map(function(p) {
+        return pt(p.x - minx, p.y - miny);
+    });
+    this.height = maxy + flakeSize;
+    this.width = maxx + flakeSize;
+    
+    return this;
+};
+
+makeGlyph.prototype.addUmlaut = function() {
+    this.points.push(
+        pt(this.width / 2 - flakeSize - flakeSize / 2, this.height),
+        pt(this.width / 2 + flakeSize - flakeSize / 2, this.height)        
+    );
+    this.recalcDimensions();
+    return this;
+};
+
+makeGlyph.prototype.withUmlaut = function() {
+    var ret = copyObj(this);
+    ret.points = copyObj(ret.points);
+    ret.addUmlaut();
+    return ret;
+};
+
+var letters = {
+    'a': makeGlyph([
+        pt(56,264),
+        pt(112,264),
+        pt(24,223),
+        pt(16,168),
+        pt(16,112),
+        pt(16,56),
+        pt(16,7),
+        pt(64,135),
+        pt(120,136),
+        pt(160,231),
+        pt(168,175),
+        pt(168,120),
+        pt(168,64),
+        pt(168,16)
+    ]),
+    'b': makeGlyph([
+        pt(16,272),
+        pt(16,223),
+        pt(16,168),
+        pt(16,112),
+        pt(16,56),
+        pt(16,7),
+        pt(64,152),
+        pt(73,272),
+        pt(128,256),
+        pt(143,200),
+        pt(129,152),
+        pt(136,104),
+        pt(144,56),
+        pt(128,8),
+        pt(72,7)
+    ]),
+    'c': makeGlyph([
+        pt(128,264),
+        pt(71,272),
+        pt(24,232),
+        pt(8,176),
+        pt(8,112),
+        pt(16,56),
+        pt(40,8),
+        pt(96,1),
+        pt(144,24)
+    ]),
+    'd': makeGlyph([
+        pt(16,248),
+        pt(16,178),
+        pt(16,112),
+        pt(16,56),
+        pt(16,7),
+        pt(62,244),
+        pt(108,222),
+        pt(136,152),
+        pt(136,96),
+        pt(120,40),
+        pt(72,16)
+    ]),
+    'e': makeGlyph([
+        pt(16,272),
+        pt(16,223),
+        pt(16,168),
+        pt(16,112),
+        pt(16,64),
+        pt(16,7),
+        pt(72,16),
+        pt(64,272),
+        pt(120,270),
+        pt(120,20),
+        pt(71,144),
+        pt(128,144)
+    ]),
+    'f': makeGlyph([
+        pt(16,272),
+        pt(16,223),
+        pt(16,168),
+        pt(16,112),
+        pt(16,56),
+        pt(16,7),
+        pt(64,272),
+        pt(120,274),
+        pt(71,144),
+        pt(128,144)
+    ]),
+    'g': makeGlyph([
+        pt(128,264),
+        pt(71,272),
+        pt(24,232),
+        pt(8,176),
+        pt(8,112),
+        pt(16,56),
+        pt(40,8),
+        pt(96,1),
+        pt(144,24),
+        pt(152,88),
+        pt(162,144),
+        pt(106,144)
+    ]),
+    'h': makeGlyph([
+        pt(16,272),
+        pt(16,223),
+        pt(16,168),
+        pt(16,112),
+        pt(16,64),
+        pt(16,7),
+        pt(140,220),
+        pt(142,172),
+        pt(132,270),
+        pt(132,7),
+        pt(132,68),
+        pt(71,144),
+        pt(128,128)
+    ]),
+    'i': makeGlyph([
+        pt(8,8),
+        pt(64,8),
+        pt(32,56),
+        pt(32,112),
+        pt(32,168),
+        pt(32,224),
+        pt(0,272),
+        pt(64,272)
+    ]),
+    'j': makeGlyph([
+        pt(8,40),
+        pt(48,8),
+        pt(88,56),
+        pt(88,112),
+        pt(90,168),
+        pt(88,224),
+        pt(56,272),
+        pt(120,272)
+    ]),
+    'k': makeGlyph([
+        pt(0,8),
+        pt(0,56),
+        pt(0,104),
+        pt(0,160),
+        pt(0,207),
+        pt(0,255),
+        pt(104,247),
+        pt(72,200),
+        pt(48,151),
+        pt(64,104),
+        pt(88,56),
+        pt(111,8)
+    ]),
+    'l': makeGlyph([
+        pt(0,8),
+        pt(0,56),
+        pt(0,104),
+        pt(0,160),
+        pt(0,207),
+        pt(0,255),
+        pt(56,8),
+        pt(104,8),
+        pt(152,7)
+    ]),
+    'm': makeGlyph([
+        pt(0,0),
+        pt(0,48),
+        pt(0,104),
+        pt(0,160),
+        pt(0,208),
+        pt(0,264),
+        pt(160,264),
+        pt(160,208),
+        pt(160,160),
+        pt(160,104),
+        pt(160,48),
+        pt(160,0),
+        pt(40,232),
+        pt(80,208),
+        pt(120,232)
+    ]),
+    'n': makeGlyph([
+        pt(0,0),
+        pt(0,48),
+        pt(0,104),
+        pt(0,160),
+        pt(0,208),
+        pt(0,264),
+        pt(160,264),
+        pt(160,208),
+        pt(160,160),
+        pt(160,104),
+        pt(160,48),
+        pt(160,0),
+        pt(40,232),
+        pt(56,183),
+        pt(72,135),
+        pt(88,88),
+        pt(104,40)
+    ]),
+    'o': makeGlyph([
+        pt(0,128),
+        pt(8,72),
+        pt(32,24),
+        pt(80,0),
+        pt(128,16),
+        pt(160,56),
+        pt(168,112),
+        pt(168,160),
+        pt(160,208),
+        pt(128,248),
+        pt(80,256),
+        pt(32,232),
+        pt(0,184)
+    ]),
+    'p': makeGlyph([
+        pt(0,0),
+        pt(0,49),
+        pt(0,105),
+        pt(0,160),
+        pt(0,208),
+        pt(0,264),
+        pt(55,264),
+        pt(111,248),
+        pt(128,192),
+        pt(104,144),
+        pt(48,128)
+    ]),
+    'q': makeGlyph([
+        pt(0,128),
+        pt(8,72),
+        pt(32,24),
+        pt(80,0),
+        pt(128,16),
+        pt(160,56),
+        pt(168,112),
+        pt(168,160),
+        pt(160,208),
+        pt(128,248),
+        pt(80,256),
+        pt(32,232),
+        pt(0,184),
+        pt(176,8),
+        pt(112,64)
+    ]),
+    'r': makeGlyph([
+        pt(0,0),
+        pt(0,49),
+        pt(0,105),
+        pt(0,160),
+        pt(0,208),
+        pt(0,264),
+        pt(55,264),
+        pt(111,248),
+        pt(128,192),
+        pt(104,144),
+        pt(48,128),
+        pt(80,80),
+        pt(112,40),
+        pt(144,0)
+    ]),
+    's': makeGlyph([
+        pt(0,23),
+        pt(48,0),
+        pt(96,0),
+        pt(136,31),
+        pt(144,80),
+        pt(112,120),
+        pt(64,128),
+        pt(24,160),
+        pt(0,208),
+        pt(24,255),
+        pt(72,271),
+        pt(120,263),
+        pt(160,231)
+    ]),
+    't': makeGlyph([
+        pt(0,264),
+        pt(48,264),
+        pt(96,264),
+        pt(144,264),
+        pt(72,0),
+        pt(72,48),
+        pt(72,104),
+        pt(72,160),
+        pt(72,208)
+    ]),
+    'u': makeGlyph([
+        pt(0,232),
+        pt(0,184),
+        pt(0,136),
+        pt(0,80),
+        pt(16,32),
+        pt(55,0),
+        pt(112,0),
+        pt(135,40),
+        pt(151,88),
+        pt(151,136),
+        pt(151,184),
+        pt(152,232)
+    ]),
+    'v': makeGlyph([
+        pt(0,232),
+        pt(16,184),
+        pt(24,136),
+        pt(40,88),
+        pt(56,40),
+        pt(80,0),
+        pt(104,40),
+        pt(119,88),
+        pt(136,136),
+        pt(144,184),
+        pt(152,232)
+    ]),
+    'w': makeGlyph([
+        pt(0,232),
+        pt(8,184),
+        pt(16,136),
+        pt(24,88),
+        pt(32,40),
+        pt(55,0),
+        pt(80,40),
+        pt(88,88),
+        pt(92,136),
+        pt(120,176),
+        pt(144,136),
+        pt(152,88),
+        pt(160,40),
+        pt(184,0),
+        pt(208,40),
+        pt(216,88),
+        pt(224,136),
+        pt(232,184),
+        pt(240,232)
+    ]),
+    'x': makeGlyph([
+        pt(0,0),
+        pt(24,40),
+        pt(48,80),
+        pt(72,128),
+        pt(48,176),
+        pt(24,216),
+        pt(0,264),
+        pt(96,80),
+        pt(120,40),
+        pt(144,0),
+        pt(96,176),
+        pt(120,216),
+        pt(144,264)
+    ]),
+    'y': makeGlyph([
+        pt(72,0),
+        pt(72,46),
+        pt(72,94),
+        pt(72,142),
+        pt(48,182),
+        pt(24,222),
+        pt(2,264),
+        pt(96,182),
+        pt(120,222),
+        pt(144,264)
+    ]),
+    'z': makeGlyph([
+        pt(0,272),
+        pt(48,272),
+        pt(96,272),
+        pt(144,272),
+        pt(120,232),
+        pt(96,184),
+        pt(72,136),
+        pt(48,88),
+        pt(24,40),
+        pt(0,0),
+        pt(48,0),
+        pt(96,0),
+        pt(144,0)
+    ]),
+    '0': makeGlyph([
+        pt(0,128),
+        pt(8,72),
+        pt(32,24),
+        pt(80,0),
+        pt(128,16),
+        pt(160,56),
+        pt(168,112),
+        pt(168,160),
+        pt(160,208),
+        pt(128,248),
+        pt(80,256),
+        pt(32,232),
+        pt(0,184),
+        pt(64,152),
+        pt(104,120)
+    ]),
+    '1': makeGlyph([
+        pt(0,176),
+        pt(24,216),
+        pt(64,248),
+        pt(64,192),
+        pt(64,144),
+        pt(64,96),
+        pt(64,48),
+        pt(16,0),
+        pt(64,0),
+        pt(112,0)
+    ]),
+    '2': makeGlyph([
+        pt(0,216),
+        pt(24,256),
+        pt(72,264),
+        pt(120,248),
+        pt(144,200),
+        pt(122,160),
+        pt(88,120),
+        pt(56,80),
+        pt(24,40),
+        pt(0,0),
+        pt(48,0),
+        pt(96,0),
+        pt(144,0)
+    ]),
+    '3': makeGlyph([
+        pt(0,32),
+        pt(40,0),
+        pt(88,0),
+        pt(120,32),
+        pt(120,80),
+        pt(88,128),
+        pt(120,176),
+        pt(120,224),
+        pt(80,256),
+        pt(32,256),
+        pt(0,224)
+    ]),
+    '4': makeGlyph([
+        pt(2,265),
+        pt(0,212),
+        pt(2,160),
+        pt(40,128),
+        pt(88,128),
+        pt(128,160),
+        pt(128,208),
+        pt(128,264),
+        pt(128,96),
+        pt(128,48),
+        pt(128,0)
+    ]),
+    '5': makeGlyph([
+        pt(0,24),
+        pt(48,0),
+        pt(104,24),
+        pt(120,80),
+        pt(104,128),
+        pt(54,144),
+        pt(0,144),
+        pt(0,200),
+        pt(0,264),
+        pt(54,264),
+        pt(120,264)
+    ]),
+    '6': makeGlyph([
+        pt(64,256),
+        pt(24,224),
+        pt(8,176),
+        pt(0,128),
+        pt(0,72),
+        pt(16,24),
+        pt(64,0),
+        pt(112,24),
+        pt(128,80),
+        pt(96,128),
+        pt(48,136)
+    ]),
+    '7': makeGlyph([
+        pt(0,240),
+        pt(48,240),
+        pt(104,240),
+        pt(160,240),
+        pt(136,192),
+        pt(112,144),
+        pt(56,128),
+        pt(160,128),
+        pt(96,96),
+        pt(80,48),
+        pt(64,0)
+    ]),
+    '8': makeGlyph([
+        pt(8,112),
+        pt(0,64),
+        pt(24,16),
+        pt(72,0),
+        pt(120,8),
+        pt(152,48),
+        pt(144,96),
+        pt(104,128),
+        pt(56,128),
+        pt(16,160),
+        pt(0,208),
+        pt(24,248),
+        pt(72,264),
+        pt(120,256),
+        pt(152,208),
+        pt(144,160)
+    ]),
+    '9': makeGlyph([
+        pt(16,16),
+        pt(64,0),
+        pt(112,16),
+        pt(144,56),
+        pt(152,104),
+        pt(112,136),
+        pt(64,136),
+        pt(16,160),
+        pt(0,208),
+        pt(24,256),
+        pt(72,264),
+        pt(120,256),
+        pt(152,216),
+        pt(152,168)
+    ]),
+    ',': makeGlyph([
+        pt(0,0),
+        pt(16,48)
+    ]),
+    '.': makeGlyph([
+        pt(0,0),
+    ]),
+    ':': makeGlyph([
+        pt(0,0),
+        pt(0,168)
+    ]),
+    ';': makeGlyph([
+        pt(0,0),
+        pt(16,48),
+        pt(0,168)
+    ]),
+    '!': makeGlyph([
+        pt(0,0),
+        pt(0,80),
+        pt(0,128),
+        pt(0,176),
+        pt(0,224),
+        pt(0,272)
+    ]),
+    '?': makeGlyph([
+        pt(32,0),
+        pt(32,72),
+        pt(40,120),
+        pt(64,160),
+        pt(88,200),
+        pt(80,248),
+        pt(40,272),
+        pt(0,248)
+        ])
+};
+
+letters['ä'] = letters.a.withUmlaut()
+letters['ö'] = letters.o.withUmlaut()
+letters['ü'] = letters.u.withUmlaut()
+
+var maxHeight = Object.keys(letters).reduce(function(max, k) {
+    return Math.max(max, letters[k].height);
+}, -Infinity);
+
+letters[' '] = {
+    height: maxHeight,
+    width: flakeSize,
+    points: []
+};
+
+var makeLine = function(str) {
+    var chars = [];
+    var str = str.toLowerCase();
+    for(var i = 0; i < str.length; i++) {
+        var letter = letters[str.charAt(i)]
+        chars.push(letter? letter : letters[' ']);
+    }
+    var ret = child(makeLine.prototype, {
+        chars: { value: chars }
+    });
+    return ret;
+};
+
+
+makeLine.prototype.display = function(offset, time, afterwards) {
+    
+    var xpos = 0;
+    
+    forEachDelayed(this.chars, 10, function(letter, next) {
+       forEachDelayed(shuffle(letter.points), 10, function(p, next) {
+           fadeFlake(getFlake(),
+                     p.x + xpos,
+                     maxHeight + offset - p.y,
+                     (time - 150) + rand() * 50,
+                     20 + rand() * 80);
+           next();
+       }, function() {
+           xpos += letter.width + flakeSize;
+           next();
+       });
+    }, afterwards);
+};
+
+var displayScreen = function(lines, size, time, afterwards) {
+    var frames = time * 60;
+    ctx.save();
+    ctx.scale(size,size);
+    var ypos = 0;
+    forEachDelayed(lines.map(makeLine), 50, function(line, next) {
+        line.display(ypos, frames, function() {
+            ypos += maxHeight + flakeSize / 2;
+            next();
+        });
+    }, function() {
+        fadeFlake.onCleared(function() {
+            ctx.restore();
+            afterwards();
+        });
+    });
+};
+
+
+var buildScreen = function(lines, size, time) {
+    return function(next) {
+        return function() {
+            displayScreen(lines, size, time, next);
+        };
+    };
+};
+
+var buildProgram = function(arr) {
+    return arr.map(function(config) {
+        var lines = config[0];
+        var size = config[1];
+        var time = config[2];
+        return buildScreen(lines, size, time);
+    }).reverse().reduce(function(prg, screenBuilder) {
+        return screenBuilder(prg);
+    }, function() {});
+};
+
+var letItSnow = function() {
+    var split = Base64.decode(window.location.hash).split(/\r\n|\r|\n/);
+    
+    var size = 0.5;
+    var time = 5;
+    var lines = [];
+    var prgArr = [];
+
+    split.forEach(function(line) {
+        var command = line.match(/^\/\/.*/);
+        if(command) {
+            prgArr.push([lines, size, time]);
+            lines = [];
+            var commandLine = command[0].replace(/,/g,'.')
+            var maybeSizeString = commandLine.match(/size:([0-9.]*)/)
+            var maybeSize = maybeSizeString &&
+                parseFloat(maybeSizeString[1], 10);
+            size = maybeSize || size;
+
+            var maybeTimeString = commandLine.match(/delay:([0-9.]*)/)
+            var maybeTime = maybeTimeString &&
+                parseFloat(maybeTimeString[1], 10);
+            time = maybeTime || time;
+        } else {
+            lines.push(line);
+        }
+    });
+
+    if(lines.length > 0) {
+        prgArr.push([lines, size, time]);        
+    }
+
+    buildProgram(prgArr)();
+};
+
+letItSnow();
+
+    </script>
+  </body>
+</html>
